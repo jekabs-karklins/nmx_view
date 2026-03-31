@@ -250,6 +250,28 @@ function App() {
         <div className="controls">
           <button
             className="reload-btn"
+            onClick={() => {
+              if (h5fileRef.current) {
+                h5fileRef.current.close();
+                h5fileRef.current = null;
+              }
+              browserFileRef.current = null;
+              eventDataRef.current = new Map();
+              setPanels([]);
+              setDetectorImages([]);
+              setTofRange([0, 0]);
+              setTofAbsMin(0);
+              setTofAbsMax(0);
+              setDomainMin("");
+              setDomainMax("");
+              setStatus("");
+            }}
+            title="Load a different file"
+          >
+            &#x1F4C2; New File
+          </button>
+          <button
+            className="reload-btn"
             onClick={handleReload}
             disabled={loading}
             title="Reload file (for SWMR / live data)"
