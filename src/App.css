@@ -31,6 +31,27 @@
   flex-wrap: wrap;
 }
 
+.reload-btn {
+  background: #003366;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.reload-btn:hover:not(:disabled) {
+  background: #004488;
+}
+
+.reload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .control-group {
   display: flex;
   align-items: center;

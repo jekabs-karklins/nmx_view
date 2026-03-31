@@ -67,12 +67,14 @@ function App() {
 
   const h5fileRef = useRef<H5File | null>(null);
   const eventDataRef = useRef<Map<number, EventData>>(new Map());
+  const browserFileRef = useRef<File | null>(null);
 
   const handleFileLoaded = useCallback(
     async (file: File) => {
       setLoading(true);
       setStatus("Opening HDF5 file...");
       try {
+        browserFileRef.current = file;
         const h5file = await openFile(file);
         h5fileRef.current = h5file;
 
@@ -154,6 +156,62 @@ function App() {
     [panels, numBins]
   );
 
+  const handleReload = useCallback(async () => {
+    if (!browserFileRef.current) return;
+    setLoading(true);
+    setStatus("Reloading file...");
+    try {
+      // Close existing h5 file
+      if (h5fileRef.current) {
+        h5fileRef.current.close();
+        h5fileRef.current = null;
+      }
+      // Re-read the browser File (picks up new SWMR data)
+      const file = browserFileRef.current;
+      const h5file = await openFile(file);
+      h5fileRef.current = h5file;
+
+      const foundPanels = findDetectorPanels(h5file);
+      if (foundPanels.length === 0) {
+        setStatus("No NXEventData detector panels found after reload.");
+        setLoading(false);
+        return;
+      }
+
+      setPanels(foundPanels);
+      // Clear cached event data so panels are re-read
+      eventDataRef.current = new Map();
+
+      // Reload the currently selected (or first) panel
+      const idx = Math.min(selectedPanel, foundPanels.length - 1);
+      setSelectedPanel(idx);
+
+      setStatus(
+        `Re-reading ${foundPanels[idx].name} (${foundPanels[idx].numEvents.toLocaleString()} events)...`
+      );
+      const ed = readEventData(h5file, foundPanels[idx].path);
+      eventDataRef.current.set(idx, ed);
+
+      const hist = computeTofHistogram(ed, numBins);
+      const range: [number, number] = [hist.tofMin, hist.tofMax];
+      setTofRange(range);
+      setTofAbsMin(hist.tofMin);
+      setTofAbsMax(hist.tofMax);
+
+      const img = computeDetectorImage(ed, range);
+      setDetectorImage(img);
+
+      setStatus(
+        `Reloaded ${foundPanels[idx].name}: ${foundPanels[idx].numEvents.toLocaleString()} events`
+      );
+    } catch (err) {
+      setStatus(`Reload error: ${(err as Error).message}`);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedPanel, numBins]);
+
   const handleTofRangeChange = useCallback(
     (range: [number, number]) => {
       setTofRange(range);
@@ -188,6 +246,14 @@ function App() {
       <header className="app-header">
         <h1>NMX Event Data Viewer</h1>
         <div className="controls">
+          <button
+            className="reload-btn"
+            onClick={handleReload}
+            disabled={loading}
+            title="Reload file (for SWMR / live data)"
+          >
+            &#x21bb; Reload
+          </button>
           <div className="control-group">
             <label>Panel:</label>
             <select
