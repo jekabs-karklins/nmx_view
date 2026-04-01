@@ -84,9 +84,11 @@ function App() {
   const [loadProgress, setLoadProgress] = useState(0);
   const [loadProgressLabel, setLoadProgressLabel] = useState("");
   const [fileName, setFileName] = useState("");
+  const [viewMode, setViewMode] = useState<"overview" | number>("overview");
 
   const activePanelCount = fileType === "NXlauetof" ? lauetofPanels.length : panels.length;
-  const chartSize = useChartSize(activePanelCount);
+  const displayPanelCount = viewMode === "overview" ? activePanelCount : 1;
+  const chartSize = useChartSize(displayPanelCount);
 
   const h5fileRef = useRef<H5File | null>(null);
   const eventDataRef = useRef<Map<number, EventData>>(new Map());
@@ -457,6 +459,23 @@ function App() {
             &#x21bb; Reload
           </button>
           <div className="control-group">
+            <label>View:</label>
+            <select
+              value={viewMode === "overview" ? "overview" : String(viewMode)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setViewMode(v === "overview" ? "overview" : Number(v));
+              }}
+            >
+              <option value="overview">Overview</option>
+              {(fileType === "NXlauetof" ? lauetofPanels : panels).map((p, i) => (
+                <option key={p.path} value={i}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="control-group">
             <label>TOF unit:</label>
             <select value={tofUnit} onChange={(e) => setTofUnit(e.target.value)}>
               <option value="ns">ns</option>
@@ -490,20 +509,23 @@ function App() {
               {imageComputing && (
                 <div className="computing-overlay">Recomputing...</div>
               )}
-              {(fileType === "NXlauetof" ? lauetofPanels : panels).map((panel, i) => {
-                const img = detectorImages[i];
-                if (!img) return null;
-                return (
-                  <DetectorImage
-                    key={panel.path}
-                    imageResult={img}
-                    panelName={panel.name}
-                    colorScale={colorScale}
-                    size={chartSize}
-                    domain={sharedDomain}
-                  />
-                );
-              })}
+              {(fileType === "NXlauetof" ? lauetofPanels : panels)
+                .filter((_, i) => viewMode === "overview" || i === viewMode)
+                .map((panel, _fi, _arr) => {
+                  const i = (fileType === "NXlauetof" ? lauetofPanels : panels).indexOf(panel);
+                  const img = detectorImages[i];
+                  if (!img) return null;
+                  return (
+                    <DetectorImage
+                      key={panel.path}
+                      imageResult={img}
+                      panelName={panel.name}
+                      colorScale={colorScale}
+                      size={chartSize}
+                      domain={sharedDomain}
+                    />
+                  );
+                })}
               <div className="shared-colorbar" style={{ height: chartSize }}>
                 <input
                   type="number"
