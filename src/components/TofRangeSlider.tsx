@@ -6,6 +6,12 @@ interface TofRangeSliderProps {
   tofRange: [number, number]; // current selection (ns)
   onTofRangeChange: (range: [number, number]) => void;
   unit?: string; // "ns" | "µs" | "ms"
+  /** Force window mode on (for NXlauetof) */
+  forceWindowMode?: boolean;
+  /** Fixed window width in ns (for NXlauetof — 1 bin spacing) */
+  fixedWindowWidthNs?: number;
+  /** TOF bin centers in ns — slider snaps to these values */
+  snapValuesNs?: number[];
 }
 
 export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
@@ -14,13 +20,48 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
   tofRange,
   onTofRangeChange,
   unit = "ns",
+  forceWindowMode = false,
+  fixedWindowWidthNs,
+  snapValuesNs,
 }) => {
   const displayScale = unit === "µs" ? 1e-3 : unit === "ms" ? 1e-6 : 1;
 
+  // Snap a value in ns to the nearest snap point
+  const snapNs = useCallback(
+    (ns: number): number => {
+      if (!snapValuesNs || snapValuesNs.length === 0) return ns;
+      let best = snapValuesNs[0];
+      let bestDist = Math.abs(ns - best);
+      for (let i = 1; i < snapValuesNs.length; i++) {
+        const dist = Math.abs(ns - snapValuesNs[i]);
+        if (dist < bestDist) {
+          best = snapValuesNs[i];
+          bestDist = dist;
+        }
+      }
+      return best;
+    },
+    [snapValuesNs]
+  );
+
   const [localRange, setLocalRange] = useState<[number, number]>(tofRange);
-  const [windowEnabled, setWindowEnabled] = useState(false);
-  const [windowWidth, setWindowWidth] = useState<number>(3000);
+  const [windowEnabled, setWindowEnabled] = useState(forceWindowMode);
+  const [windowWidth, setWindowWidth] = useState<number>(
+    fixedWindowWidthNs ? fixedWindowWidthNs * displayScale : 3000
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync forceWindowMode changes
+  useEffect(() => {
+    if (forceWindowMode) setWindowEnabled(true);
+  }, [forceWindowMode]);
+
+  // Sync fixedWindowWidth changes
+  useEffect(() => {
+    if (fixedWindowWidthNs != null) {
+      setWindowWidth(fixedWindowWidthNs * displayScale);
+    }
+  }, [fixedWindowWidthNs, displayScale]);
 
   useEffect(() => {
     setLocalRange(tofRange);
@@ -48,7 +89,8 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
   // Handle individual min/max thumb changes (free mode)
   const handleChange = useCallback(
     (idx: 0 | 1, displayValue: number) => {
-      const nsValue = displayValue / displayScale;
+      let nsValue = displayValue / displayScale;
+      nsValue = snapNs(nsValue);
       const newRange: [number, number] = [...localRange];
       newRange[idx] = nsValue;
       if (newRange[0] > newRange[1]) {
@@ -59,7 +101,7 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
       setLocalRange(clamped);
       commitRange(clamped);
     },
-    [localRange, displayScale, clampRange, commitRange]
+    [localRange, displayScale, clampRange, commitRange, snapNs]
   );
 
   // Handle center slider change (window mode)
@@ -67,7 +109,8 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
     (displayCenter: number) => {
       if (windowWidth === null) return;
       const widthNs = windowWidth / displayScale;
-      const centerNs = displayCenter / displayScale;
+      let centerNs = displayCenter / displayScale;
+      centerNs = snapNs(centerNs);
       let lo = centerNs - widthNs / 2;
       let hi = centerNs + widthNs / 2;
       if (lo < tofMin) {
@@ -82,7 +125,7 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
       setLocalRange(clamped);
       commitRange(clamped);
     },
-    [windowWidth, displayScale, tofMin, tofMax, clampRange, commitRange]
+    [windowWidth, displayScale, tofMin, tofMax, clampRange, commitRange, snapNs]
   );
 
   // When window width changes, snap the current range to that width
@@ -136,15 +179,17 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
     (direction: -1 | 1) => {
       if (!windowEnabled || windowWidth <= 0) return;
       const widthNs = windowWidth / displayScale;
-      let lo = localRange[0] + direction * widthNs;
-      let hi = localRange[1] + direction * widthNs;
+      const currentCenter = (localRange[0] + localRange[1]) / 2;
+      const newCenter = snapNs(currentCenter + direction * widthNs);
+      let lo = newCenter - widthNs / 2;
+      let hi = newCenter + widthNs / 2;
       if (lo < tofMin) { lo = tofMin; hi = tofMin + widthNs; }
       if (hi > tofMax) { hi = tofMax; lo = tofMax - widthNs; }
       const clamped = clampRange(lo, hi);
       setLocalRange(clamped);
       commitRange(clamped);
     },
-    [windowEnabled, windowWidth, displayScale, localRange, tofMin, tofMax, clampRange, commitRange]
+    [windowEnabled, windowWidth, displayScale, localRange, tofMin, tofMax, clampRange, commitRange, snapNs]
   );
 
   useEffect(() => {
@@ -247,6 +292,7 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
           <input
             type="checkbox"
             checked={windowEnabled}
+            disabled={forceWindowMode}
             onChange={(e) => handleWindowToggle(e.target.checked)}
           />
           Window:
@@ -257,7 +303,7 @@ export const TofRangeSlider: React.FC<TofRangeSliderProps> = ({
           value={windowWidth}
           step={step}
           min={0}
-          disabled={!windowEnabled}
+          disabled={!windowEnabled || forceWindowMode}
           onChange={(e) => handleWindowWidthChange(e.target.value)}
         />
         <span className="tof-label-small">{unit}</span>
