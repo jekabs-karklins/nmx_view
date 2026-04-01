@@ -146,10 +146,12 @@
   background: #003366;
 }
 [data-filetype="NXlauetof"] .colorbar-auto-btn {
-  background: #821482;
+  background: #99BE00;
+  color: #003300;
 }
 [data-filetype="NXlauetof"] .colorbar-auto-btn:hover {
-  background: #4a0c4a;
+  background: #006646;
+  color: #ffffff;
 }
 
 .app-main {
@@ -438,10 +440,10 @@
   margin-top: 0.25rem;
 }
 
-/* ── NXlauetof purple theme overrides ── */
+/* ── NXlauetof green theme overrides ── */
 .app[data-filetype="NXlauetof"] .app-header {
-  background: #821482;
-  border-bottom-color: #5e0f5e;
+  background: #006646;
+  border-bottom-color: #004d34;
 }
 
 .app[data-filetype="NXlauetof"] .app-header h1 {
@@ -461,87 +463,90 @@
 }
 
 .app[data-filetype="NXlauetof"] .reload-btn {
-  background: #4a0c4a;
+  background: #004d34;
 }
 
 .app[data-filetype="NXlauetof"] .reload-btn:hover:not(:disabled) {
-  background: #5e0f5e;
+  background: #99BE00;
+  color: #003300;
 }
 
 .app[data-filetype="NXlauetof"] .control-group select,
 .app[data-filetype="NXlauetof"] .control-group input[type="number"] {
-  background: #4a0c4a;
+  background: #004d34;
   border-color: rgba(255, 255, 255, 0.3);
 }
 
 .app[data-filetype="NXlauetof"] .computing-overlay {
-  color: #821482;
+  color: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .detector-image-panel h3 {
-  color: #821482;
+  color: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .dual-range-container::before {
-  background: #e8cce8;
+  background: #e0ecc0;
 }
 
 .app[data-filetype="NXlauetof"] .dual-range-track-fill {
-  background: #821482;
+  background: #99BE00;
 }
 
 .app[data-filetype="NXlauetof"] .dual-range-input::-webkit-slider-thumb {
-  background: #4a0c4a;
+  background: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .dual-range-input::-moz-range-thumb {
-  background: #4a0c4a;
+  background: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .tof-number {
-  border-color: #821482;
+  border-color: #99BE00;
 }
 
 .app[data-filetype="NXlauetof"] .tof-window-toggle input[type="checkbox"] {
-  accent-color: #821482;
+  accent-color: #99BE00;
 }
 
 .app[data-filetype="NXlauetof"] .colorbar-domain-input:focus {
-  outline-color: #821482;
+  outline-color: #99BE00;
 }
 
 .app[data-filetype="NXlauetof"] .file-loader-content h2 {
-  color: #821482;
+  color: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .drop-zone {
-  border-color: #821482;
+  border-color: #99BE00;
 }
 
 .app[data-filetype="NXlauetof"] .drop-zone:hover {
-  border-color: #4a0c4a;
-  background: rgba(130, 20, 130, 0.05);
+  border-color: #006646;
+  background: rgba(153, 190, 0, 0.05);
 }
 
 .app[data-filetype="NXlauetof"] .file-input-label {
-  background: #821482;
+  background: #99BE00;
+  color: #003300;
 }
 
 .app[data-filetype="NXlauetof"] .file-input-label:hover {
-  background: #4a0c4a;
+  background: #006646;
+  color: #ffffff;
 }
 
 .app[data-filetype="NXlauetof"] .progress-bar-fill {
-  background: linear-gradient(90deg, #821482, #4a0c4a);
+  background: linear-gradient(90deg, #99BE00, #006646);
 }
 
 .app[data-filetype="NXlauetof"] .progress-percent {
-  color: #821482;
+  color: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .status-bar {
-  background: #4a0c4a;
-  border-top-color: #821482;
+  background: #004d35;
+  border-top-color: #99BE00;
 }
 
 /* Status Bar */
