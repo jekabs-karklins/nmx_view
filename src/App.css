@@ -438,6 +438,112 @@
   margin-top: 0.25rem;
 }
 
+/* ── NXlauetof purple theme overrides ── */
+.app[data-filetype="NXlauetof"] .app-header {
+  background: #821482;
+  border-bottom-color: #5e0f5e;
+}
+
+.app[data-filetype="NXlauetof"] .app-header h1 {
+  color: #ffffff;
+}
+
+.filetype-badge {
+  margin-left: auto;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.app[data-filetype="NXlauetof"] .reload-btn {
+  background: #4a0c4a;
+}
+
+.app[data-filetype="NXlauetof"] .reload-btn:hover:not(:disabled) {
+  background: #5e0f5e;
+}
+
+.app[data-filetype="NXlauetof"] .control-group select,
+.app[data-filetype="NXlauetof"] .control-group input[type="number"] {
+  background: #4a0c4a;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.app[data-filetype="NXlauetof"] .computing-overlay {
+  color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .detector-image-panel h3 {
+  color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .dual-range-container::before {
+  background: #e8cce8;
+}
+
+.app[data-filetype="NXlauetof"] .dual-range-track-fill {
+  background: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .dual-range-input::-webkit-slider-thumb {
+  background: #4a0c4a;
+}
+
+.app[data-filetype="NXlauetof"] .dual-range-input::-moz-range-thumb {
+  background: #4a0c4a;
+}
+
+.app[data-filetype="NXlauetof"] .tof-number {
+  border-color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .tof-window-toggle input[type="checkbox"] {
+  accent-color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .colorbar-domain-input:focus {
+  outline-color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .file-loader-content h2 {
+  color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .drop-zone {
+  border-color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .drop-zone:hover {
+  border-color: #4a0c4a;
+  background: rgba(130, 20, 130, 0.05);
+}
+
+.app[data-filetype="NXlauetof"] .file-input-label {
+  background: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .file-input-label:hover {
+  background: #4a0c4a;
+}
+
+.app[data-filetype="NXlauetof"] .progress-bar-fill {
+  background: linear-gradient(90deg, #821482, #4a0c4a);
+}
+
+.app[data-filetype="NXlauetof"] .progress-percent {
+  color: #821482;
+}
+
+.app[data-filetype="NXlauetof"] .status-bar {
+  background: #4a0c4a;
+  border-top-color: #821482;
+}
+
 /* Status Bar */
 .status-bar {
   padding: 0.4rem 1.5rem;
