@@ -145,10 +145,8 @@ export function findDetectorPanels(h5file: H5File): DetectorPanelInfo[] {
 export interface EventData {
   /** Pre-converted event pixel IDs (Float64) */
   eventIdF64: Float64Array;
-  /** Pre-converted TOF values (Float64), sorted ascending */
-  tofSorted: Float64Array;
-  /** Indices into original arrays, sorted by TOF */
-  sortedIndices: Uint32Array;
+  /** Pre-converted TOF values (Float64) */
+  tofF64: Float64Array;
   detectorShape: [number, number];
   panelPixelIdMin: number;
   /** Cached pixel-to-flat-index mapping */
@@ -222,24 +220,19 @@ export function readEventData(h5file: H5File, panelPath: string): EventData {
   const totalPixels = detectorShape[0] * detectorShape[1];
   const { pixelToFlat, isIdentity } = buildPixelMap(detectorNumber, panelPixelIdMin, totalPixels);
 
-  // 4. Pre-sort events by TOF: create index array and sort
-  const n = tofF64.length;
-  const sortedIndices = new Uint32Array(n);
-  for (let i = 0; i < n; i++) sortedIndices[i] = i;
-  sortedIndices.sort((a, b) => tofF64[a] - tofF64[b]);
-
-  // Build sorted TOF array for binary search
-  const tofSorted = new Float64Array(n);
-  for (let i = 0; i < n; i++) tofSorted[i] = tofF64[sortedIndices[i]];
-
-  // 5. Pre-compute TOF bounds
-  const tofMin = n > 0 ? tofSorted[0] : 0;
-  const tofMax = n > 0 ? tofSorted[n - 1] : 0;
+  // 4. Find TOF bounds with a single O(N) pass
+  let tofMin = Infinity;
+  let tofMax = -Infinity;
+  for (let i = 0; i < tofF64.length; i++) {
+    const v = tofF64[i];
+    if (v < tofMin) tofMin = v;
+    if (v > tofMax) tofMax = v;
+  }
+  if (!isFinite(tofMin)) { tofMin = 0; tofMax = 0; }
 
   return {
     eventIdF64,
-    tofSorted,
-    sortedIndices,
+    tofF64,
     detectorShape,
     panelPixelIdMin,
     pixelToFlat,
