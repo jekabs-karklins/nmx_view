@@ -49,6 +49,8 @@ export function computeDetectorImage(
   eventData: EventData,
   tofRange: [number, number]
 ): DetectorImageResult {
+  console.time('computeDetectorImage');
+
   const { detectorShape, panelPixelIdMin, pixelToFlat, isIdentity,
           eventIdF64, tofF64 } = eventData;
   const [rows, cols] = detectorShape;
@@ -84,6 +86,6 @@ export function computeDetectorImage(
       }
     }
   }
-
+  console.timeEnd('computeDetectorImage');
   return { image, shape: [rows, cols], totalEvents };
 }

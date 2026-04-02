@@ -197,6 +197,8 @@ function buildPixelMap(
  * cache pixel mapping. All heavy work is done here at load time.
  */
 export function readEventData(h5file: H5File, panelPath: string): EventData {
+  console.time(`[${panelPath}] total readEventData`);
+
   const eventIdDs = h5file.get(`${panelPath}/data/event_id`) as H5Dataset;
   const etoDs = h5file.get(`${panelPath}/data/event_time_offset`) as H5Dataset;
   const detNumDs = h5file.get(`${panelPath}/detector_number`) as H5Dataset;
@@ -207,8 +209,10 @@ export function readEventData(h5file: H5File, panelPath: string): EventData {
   const detectorShape: [number, number] = [detNumDs.shape![0], detNumDs.shape![1]];
 
   // 1. Convert BigInt → Float64 (done once)
+  console.time(`[${panelPath}] BigInt→Float64`);
   const eventIdF64 = toFloat64(rawEventId);
   const tofF64 = toFloat64(rawTof);
+  console.timeEnd(`[${panelPath}] BigInt→Float64`);
 
   // 2. Find panelPixelIdMin
   let panelPixelIdMin = Number.MAX_SAFE_INTEGER;
@@ -218,18 +222,24 @@ export function readEventData(h5file: H5File, panelPath: string): EventData {
 
   // 3. Build + cache pixel map
   const totalPixels = detectorShape[0] * detectorShape[1];
+  console.time(`[${panelPath}] buildPixelMap`);
   const { pixelToFlat, isIdentity } = buildPixelMap(detectorNumber, panelPixelIdMin, totalPixels);
+  console.timeEnd(`[${panelPath}] buildPixelMap`);
 
   // 4. Find TOF bounds with a single O(N) pass
   let tofMin = Infinity;
   let tofMax = -Infinity;
+  console.time(`[${panelPath}] TOF bounds`);
+
   for (let i = 0; i < tofF64.length; i++) {
     const v = tofF64[i];
     if (v < tofMin) tofMin = v;
     if (v > tofMax) tofMax = v;
   }
-  if (!isFinite(tofMin)) { tofMin = 0; tofMax = 0; }
+  console.timeEnd(`[${panelPath}] TOF bounds`);
 
+  if (!isFinite(tofMin)) { tofMin = 0; tofMax = 0; }
+  console.timeEnd(`[${panelPath}] total readEventData`);
   return {
     eventIdF64,
     tofF64,
