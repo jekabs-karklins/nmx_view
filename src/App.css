@@ -53,7 +53,6 @@
 }
 
 .file-name-badge {
-  margin-left: auto;
   font-size: 0.85rem;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.9);
@@ -452,7 +451,6 @@
 }
 
 .filetype-badge {
-  margin-left: auto;
   padding: 4px 14px;
   border-radius: 4px;
   font-weight: 700;
@@ -461,6 +459,102 @@
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* ── Help button ─────────────────── */
+.help-btn {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.help-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: #ffffff;
+}
+
+/* ── Help overlay / modal ────────── */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.help-modal {
+  position: relative;
+  background: #ffffff;
+  color: #003366;
+  border-radius: 10px;
+  padding: 2rem 2.5rem;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  line-height: 1.6;
+}
+.help-modal h2 {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+  color: #0099DC;
+}
+.help-modal h3 {
+  margin: 1rem 0 0.3rem;
+  font-size: 1rem;
+  color: #003366;
+}
+.help-modal ul {
+  margin: 0.3rem 0 0.5rem;
+  padding-left: 1.3rem;
+}
+.help-modal li {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+.help-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #003366;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.help-close:hover {
+  background: #e0e0e0;
+}
+.help-shortcut {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #666;
+}
+.help-shortcut kbd {
+  background: #e8e8e8;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.app[data-filetype="NXlauetof"] .help-modal h2 {
+  color: #006646;
 }
 
 .app[data-filetype="NXlauetof"] .reload-btn {
