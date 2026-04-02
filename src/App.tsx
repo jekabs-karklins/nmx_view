@@ -85,6 +85,20 @@ function App() {
   const [loadProgressLabel, setLoadProgressLabel] = useState("");
   const [fileName, setFileName] = useState("");
   const [viewMode, setViewMode] = useState<"overview" | number>("overview");
+  const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "h" || e.key === "H") {
+        e.preventDefault();
+        setShowHelp((v) => !v);
+      }
+      if (e.key === "Escape") setShowHelp(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const activePanelCount = fileType === "NXlauetof" ? lauetofPanels.length : panels.length;
   const displayPanelCount = viewMode === "overview" ? activePanelCount : 1;
@@ -424,6 +438,7 @@ function App() {
     <div className="app" data-filetype={fileType}>
       <header className="app-header">
         <h1>NMX Event Data Viewer</h1>
+        {fileName && <span className="file-name-badge">{fileName}</span>}
         <div className="controls">
           <button
             className="reload-btn"
@@ -495,10 +510,16 @@ function App() {
               <option value={ScaleType.Sqrt}>Sqrt</option>
             </select>
           </div>
-          {fileName && <span className="file-name-badge">{fileName}</span>}
           {fileType === "NXlauetof" && (
             <span className="filetype-badge">NXLaueTOF</span>
           )}
+          <button
+            className="help-btn"
+            onClick={() => setShowHelp((v) => !v)}
+            title="Help (H)"
+          >
+            ?
+          </button>
         </div>
       </header>
 
@@ -579,6 +600,47 @@ function App() {
       </main>
 
       <div className="status-bar">{status}</div>
+
+      {showHelp && (
+        <div className="help-overlay" onClick={() => setShowHelp(false)}>
+          <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="help-close" onClick={() => setShowHelp(false)}>✕</button>
+            <h2>NMX Event Data Viewer — Help</h2>
+            <h3>Loading Data</h3>
+            <ul>
+              <li>Drag & drop an HDF5/NeXus file onto the drop zone, or click to browse</li>
+              <li>Supported formats: <strong>NXevent_data</strong> (raw events) and <strong>NXLaueTOF</strong> (pre-binned)</li>
+              <li>Use <strong>↻ Reload</strong> to re-read the file (useful for SWMR live data)</li>
+              <li>Use <strong>📂 New File</strong> to load a different file</li>
+            </ul>
+            <h3>TOF Slider</h3>
+            <ul>
+              <li>Drag the two thumbs to set a TOF range for filtering events</li>
+              <li>Enable <strong>Window</strong> mode to lock the range width and slide it as a unit</li>
+              <li>In window mode, press <strong>← / →</strong> arrow keys to step by one window width</li>
+              <li>For NXLaueTOF files, the slider snaps to TOF bin centers</li>
+            </ul>
+            <h3>Views</h3>
+            <ul>
+              <li><strong>Overview</strong>: all detector panels side by side</li>
+              <li><strong>Single panel</strong>: select a panel from the View dropdown for a larger view with zoom</li>
+            </ul>
+            <h3>Zoom (Single Panel View)</h3>
+            <ul>
+              <li><strong>Click & drag</strong> to draw a selection box and zoom in</li>
+              <li><strong>Shift + drag</strong> to pan</li>
+              <li>Click <strong>Reset Zoom</strong> to return to the full view</li>
+            </ul>
+            <h3>Color Scale</h3>
+            <ul>
+              <li>Choose scale type (Linear, Log, SymLog, Sqrt) from the dropdown</li>
+              <li>Type values in the <strong>Min / Max</strong> inputs on the color bar to override the range</li>
+              <li>Click <strong>Auto</strong> to reset to the optimal range (µ&nbsp;+&nbsp;2σ outlier rejection)</li>
+            </ul>
+            <p className="help-shortcut">Press <kbd>H</kbd> to toggle this help</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
