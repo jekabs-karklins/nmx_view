@@ -73,7 +73,7 @@ function App() {
     (DetectorImageResult | null)[]
   >([]);
   const [tofRange, setTofRange] = useState<[number, number]>([0, 0]);
-  const [tofUnit, setTofUnit] = useState("µs");
+  const tofUnit = "µs";
   const [tofAbsMin, setTofAbsMin] = useState(0);
   const [tofAbsMax, setTofAbsMax] = useState(0);
   const [colorScale, setColorScale] = useState<ColorScaleType>(ScaleType.Linear);
@@ -490,14 +490,7 @@ function App() {
               ))}
             </select>
           </div>
-          <div className="control-group">
-            <label>TOF unit:</label>
-            <select value={tofUnit} onChange={(e) => setTofUnit(e.target.value)}>
-              <option value="ns">ns</option>
-              <option value="µs">µs</option>
-              <option value="ms">ms</option>
-            </select>
-          </div>
+
           <div className="control-group">
             <label>Color scale:</label>
             <select
