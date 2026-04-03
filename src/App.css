@@ -401,6 +401,35 @@
   background: #003366;
 }
 
+.demo-section {
+  margin-top: 2rem;
+  text-align: center;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1.5rem;
+}
+
+.demo-section p {
+  margin-bottom: 0.75rem;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.demo-button {
+  padding: 0.75rem 2rem;
+  background: #003366;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.demo-button:hover {
+  background: #0099DC;
+}
+
 .loading-progress {
   margin-top: 2rem;
   width: 100%;

@@ -23,6 +23,7 @@ import {
   computeDetectorImage,
   type DetectorImageResult,
 } from "./lib/event-data";
+import { generateDemoData } from "./lib/demo-data";
 import type { File as H5File } from "h5wasm";
 import "./App.css";
 
@@ -266,6 +267,38 @@ function App() {
     [loadAllPanels, loadAllLauetofPanels]
   );
 
+  const handleLoadDemo = useCallback(async () => {
+    setLoading(true);
+    setStatus("Generating demo data...");
+    setFileName("demo (synthetic)");
+    setFileType("NXeventdata");
+    setLoadProgress(0);
+    setLoadProgressLabel("Generating demo data...");
+
+    // Yield to UI so progress bar appears
+    await yieldToUI();
+
+    const demo = generateDemoData((pct, label) => {
+      setLoadProgress(pct);
+      setLoadProgressLabel(label);
+    });
+
+    eventDataRef.current = demo.eventDataMap;
+    setTofRange([demo.tofMin, demo.tofMax]);
+    setTofAbsMin(demo.tofMin);
+    setTofAbsMax(demo.tofMax);
+    setDetectorImages(demo.images);
+    setPanels(demo.panels);
+
+    setLoadProgress(100);
+    setLoadProgressLabel("Done!");
+    const totalEvents = demo.images.reduce((s, img) => s + img.totalEvents, 0);
+    setStatus(
+      `Demo: ${demo.panels.length} panels — ${totalEvents.toLocaleString()} events`
+    );
+    setLoading(false);
+  }, []);
+
   const handleReload = useCallback(async () => {
     if (!browserFileRef.current) return;
     setLoading(true);
@@ -429,6 +462,7 @@ function App() {
       <div className="app" data-filetype={fileType}>
         <FileLoader
           onFileLoaded={handleFileLoaded}
+          onLoadDemo={handleLoadDemo}
           loading={loading}
           progress={loadProgress}
           progressLabel={loadProgressLabel}
