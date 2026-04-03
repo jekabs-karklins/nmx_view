@@ -57,30 +57,67 @@ export async function openFile(file: File): Promise<H5File> {
 
 export type NexusFileType = "NXeventdata" | "NXlauetof" | "unknown";
 
+/**
+ * Try to read a string value from an HDF5 dataset (handles typed arrays, Uint8Array, etc.)
+ */
+function readStringValue(ds: H5Dataset): string {
+  const val = ds.value;
+  if (typeof val === "string") return val.trim();
+  if (val instanceof Uint8Array) return new TextDecoder().decode(val).trim();
+  return String(val ?? "").trim();
+}
+
+/**
+ * Find an NXevent_data group within a panel group.
+ * Checks: (1) direct child datasets, (2) 'data' subgroup, (3) any subgroup with NX_class=NXevent_data.
+ */
+function findEventDataGroup(
+  h5file: H5File,
+  panelPath: string,
+  panelGroup: H5Group
+): H5Group | null {
+  // Check if event_id exists directly in the panel group
+  const directEventId = panelGroup.get("event_id") as H5Dataset | null;
+  if (directEventId) return panelGroup;
+
+  // Check 'data' subgroup
+  const dataChild = panelGroup.get("data");
+  if (dataChild && dataChild instanceof H5Group) {
+    const eid = dataChild.get("event_id") as H5Dataset | null;
+    if (eid) return dataChild;
+  }
+
+  // Scan all child groups for one containing event_id or NX_class=NXevent_data
+  for (const childKey of panelGroup.keys()) {
+    const child = panelGroup.get(childKey);
+    if (!(child instanceof H5Group)) continue;
+    const nxAttr = child.attrs?.["NX_class"];
+    if (nxAttr) {
+      const nxVal = nxAttr.value;
+      if (typeof nxVal === "string" && nxVal === "NXevent_data") return child;
+    }
+    const eid = child.get("event_id") as H5Dataset | null;
+    if (eid) return child;
+  }
+
+  return null;
+}
+
 export function detectFileType(h5file: H5File): NexusFileType {
   // Check /entry/definition or /entry/definitions
   for (const path of ["entry/definition", "entry/definitions"]) {
     const ds = h5file.get(path) as H5Dataset | null;
     if (!ds) continue;
-    const val = ds.value;
-    const str =
-      typeof val === "string"
-        ? val
-        : val instanceof Uint8Array
-          ? new TextDecoder().decode(val)
-          : String(val ?? "");
-    if (str.trim() === "NXlauetof") return "NXlauetof";
+    if (readStringValue(ds) === "NXlauetof") return "NXlauetof";
   }
-  // Fall back: check if any panel has NXevent_data
+  // Fall back: scan all groups under /entry/instrument/ for NXevent_data content
   const instrument = h5file.get("entry/instrument");
   if (instrument && instrument instanceof H5Group) {
     for (const key of instrument.keys()) {
-      if (!key.startsWith("detector_panel")) continue;
-      const dataGroup = h5file.get(`entry/instrument/${key}/data`);
-      if (dataGroup && dataGroup instanceof H5Group) {
-        const eventIdDs = dataGroup.get("event_id") as H5Dataset | null;
-        if (eventIdDs) return "NXeventdata";
-      }
+      const child = instrument.get(key);
+      if (!(child instanceof H5Group)) continue;
+      const evGroup = findEventDataGroup(h5file, `entry/instrument/${key}`, child);
+      if (evGroup) return "NXeventdata";
     }
   }
   return "unknown";
@@ -102,29 +139,39 @@ export function findDetectorPanels(h5file: H5File): DetectorPanelInfo[] {
   const instrument = h5file.get("entry/instrument");
   if (!instrument || !(instrument instanceof H5Group)) return panels;
 
-  const group = instrument;
-  const keys = group.keys();
-  for (const key of keys) {
-    if (!key.startsWith("detector_panel")) continue;
+  for (const key of instrument.keys()) {
+    const child = instrument.get(key);
+    if (!(child instanceof H5Group)) continue;
+
     const panelPath = `entry/instrument/${key}`;
-    const dataGroup = h5file.get(`${panelPath}/data`);
-    if (!dataGroup) continue;
+    const evGroup = findEventDataGroup(h5file, panelPath, child);
+    if (!evGroup) continue;
 
-    const dataG = dataGroup as H5Group;
-    const attrs = dataG.attrs;
-    const nxClass = attrs?.["NX_class"];
-    // Check it's NXevent_data
-    if (nxClass) {
-      const nxVal = nxClass.value;
-      if (typeof nxVal === "string" && nxVal !== "NXevent_data") continue;
-    }
-
-    const eventIdDs = dataG.get("event_id") as H5Dataset | null;
+    const eventIdDs = evGroup.get("event_id") as H5Dataset | null;
     if (!eventIdDs) continue;
 
-    const detNumDs = h5file.get(`${panelPath}/detector_number`) as
-      | H5Dataset
-      | undefined;
+    // Look for detector_number in the panel group (not necessarily the event data group)
+    let detNumDs = h5file.get(`${panelPath}/detector_number`) as H5Dataset | undefined;
+    // Also check parent-level x_pixel_offset / y_pixel_offset for shape
+    if (!detNumDs) {
+      const xOff = h5file.get(`${panelPath}/x_pixel_offset`) as H5Dataset | undefined;
+      const yOff = h5file.get(`${panelPath}/y_pixel_offset`) as H5Dataset | undefined;
+      if (xOff?.shape && yOff?.shape) {
+        // Construct shape from pixel offsets — each should be 1D with size = dim
+        const nx = xOff.shape.length === 1 ? xOff.shape[0] : xOff.shape[1] ?? xOff.shape[0];
+        const ny = yOff.shape.length === 1 ? yOff.shape[0] : yOff.shape[0];
+        panels.push({
+          path: panelPath,
+          name: key,
+          numEvents: eventIdDs.shape![0],
+          detectorShape: [ny, nx],
+          pixelIdMin: 0,
+          pixelIdMax: ny * nx - 1,
+        });
+        continue;
+      }
+    }
+
     const detShape: [number, number] = detNumDs?.shape
       ? [detNumDs.shape[0], detNumDs.shape[1]]
       : [1280, 1280];
@@ -199,14 +246,47 @@ function buildPixelMap(
 export function readEventData(h5file: H5File, panelPath: string): EventData {
   console.time(`[${panelPath}] total readEventData`);
 
-  const eventIdDs = h5file.get(`${panelPath}/data/event_id`) as H5Dataset;
-  const etoDs = h5file.get(`${panelPath}/data/event_time_offset`) as H5Dataset;
-  const detNumDs = h5file.get(`${panelPath}/detector_number`) as H5Dataset;
+  const panelGroup = h5file.get(panelPath) as H5Group;
+  const evGroup = findEventDataGroup(h5file, panelPath, panelGroup);
+  if (!evGroup) throw new Error(`No event data found in ${panelPath}`);
+
+  const eventIdDs = evGroup.get("event_id") as H5Dataset;
+  const etoDs = evGroup.get("event_time_offset") as H5Dataset;
+
+  // detector_number can be in the panel group or the event data group
+  let detNumDs = h5file.get(`${panelPath}/detector_number`) as H5Dataset | null;
+  if (!detNumDs) detNumDs = evGroup.get("detector_number") as H5Dataset | null;
 
   const rawEventId = eventIdDs.value as Int32Array | BigInt64Array;
   const rawTof = etoDs.value as Int32Array | BigInt64Array;
-  const detectorNumber = detNumDs.value as Int32Array;
-  const detectorShape: [number, number] = [detNumDs.shape![0], detNumDs.shape![1]];
+
+  let detectorNumber: Int32Array;
+  let detectorShape: [number, number];
+
+  if (detNumDs && detNumDs.shape && detNumDs.shape.length >= 2) {
+    detectorNumber = detNumDs.value as Int32Array;
+    detectorShape = [detNumDs.shape[0], detNumDs.shape[1]];
+  } else if (detNumDs && detNumDs.shape && detNumDs.shape.length === 1) {
+    // 1D detector_number — infer square shape
+    const n = Math.round(Math.sqrt(detNumDs.shape[0]));
+    detectorNumber = detNumDs.value as Int32Array;
+    detectorShape = [n, n];
+  } else {
+    // No detector_number — try to infer shape from x/y_pixel_offset
+    const xOff = h5file.get(`${panelPath}/x_pixel_offset`) as H5Dataset | null;
+    const yOff = h5file.get(`${panelPath}/y_pixel_offset`) as H5Dataset | null;
+    if (xOff?.shape && yOff?.shape) {
+      const nx = xOff.shape.length === 1 ? xOff.shape[0] : xOff.shape[1] ?? xOff.shape[0];
+      const ny = yOff.shape.length === 1 ? yOff.shape[0] : yOff.shape[0];
+      detectorShape = [ny, nx];
+    } else {
+      detectorShape = [1280, 1280];
+    }
+    // Build identity detector_number
+    const totalPx = detectorShape[0] * detectorShape[1];
+    detectorNumber = new Int32Array(totalPx);
+    for (let i = 0; i < totalPx; i++) detectorNumber[i] = i;
+  }
 
   // 1. Convert BigInt → Float64 (done once)
   console.time(`[${panelPath}] BigInt→Float64`);
@@ -261,19 +341,66 @@ export interface LauetofPanelInfo {
   tofBins: Float64Array; // TOF bin centers (ns)
 }
 
+/**
+ * Find a 3D data dataset and time_of_flight within a panel group.
+ * Checks: (1) direct 'data' dataset, (2) any child dataset with ndim=3,
+ * and looks for 'time_of_flight' in the panel group or any child group.
+ */
+function findLauetofDatasets(
+  h5file: H5File,
+  panelPath: string,
+  panelGroup: H5Group
+): { dataDs: H5Dataset; tofDs: H5Dataset } | null {
+  let dataDs: H5Dataset | null = null;
+  let tofDs: H5Dataset | null = null;
+
+  // Look for 3D data dataset: check 'data' first, then scan children
+  const directData = h5file.get(`${panelPath}/data`) as H5Dataset | null;
+  if (directData?.shape?.length === 3) {
+    dataDs = directData;
+  } else {
+    for (const childKey of panelGroup.keys()) {
+      const child = panelGroup.get(childKey);
+      if (child instanceof H5Dataset && child.shape?.length === 3) {
+        dataDs = child;
+        break;
+      }
+    }
+  }
+  if (!dataDs) return null;
+
+  // Look for time_of_flight: in panel group, then any child group
+  tofDs = h5file.get(`${panelPath}/time_of_flight`) as H5Dataset | null;
+  if (!tofDs) {
+    for (const childKey of panelGroup.keys()) {
+      const child = panelGroup.get(childKey);
+      if (child instanceof H5Group) {
+        const tof = child.get("time_of_flight") as H5Dataset | null;
+        if (tof) { tofDs = tof; break; }
+      } else if (child instanceof H5Dataset && childKey === "time_of_flight") {
+        tofDs = child;
+        break;
+      }
+    }
+  }
+  if (!tofDs) return null;
+
+  return { dataDs, tofDs };
+}
+
 export function findLauetofPanels(h5file: H5File): LauetofPanelInfo[] {
   const panels: LauetofPanelInfo[] = [];
   const instrument = h5file.get("entry/instrument");
   if (!instrument || !(instrument instanceof H5Group)) return panels;
 
   for (const key of instrument.keys()) {
-    if (!key.startsWith("detector_panel")) continue;
-    const panelPath = `entry/instrument/${key}`;
-    const dataDs = h5file.get(`${panelPath}/data`) as H5Dataset | null;
-    if (!dataDs || !dataDs.shape || dataDs.shape.length !== 3) continue;
+    const child = instrument.get(key);
+    if (!(child instanceof H5Group)) continue;
 
-    const tofDs = h5file.get(`${panelPath}/time_of_flight`) as H5Dataset | null;
-    if (!tofDs) continue;
+    const panelPath = `entry/instrument/${key}`;
+    const result = findLauetofDatasets(h5file, panelPath, child);
+    if (!result) continue;
+    const { dataDs, tofDs } = result;
 
     const tofRaw = tofDs.value;
     let tofBins: Float64Array;
@@ -308,7 +435,10 @@ export function readLauetofSingleSlice(
   panelPath: string,
   sliceIndex: number
 ): DetectorImageResult {
-  const dataDs = h5file.get(`${panelPath}/data`) as H5Dataset;
+  const panelGroup = h5file.get(panelPath) as H5Group;
+  const result = findLauetofDatasets(h5file, panelPath, panelGroup);
+  if (!result) throw new Error(`No 3D data found in ${panelPath}`);
+  const { dataDs } = result;
   const [rows, cols, numBins] = dataDs.shape!;
   const idx = Math.max(0, Math.min(numBins - 1, sliceIndex));
 
