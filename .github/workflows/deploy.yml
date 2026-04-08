@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy
 
 on:
   push:
@@ -28,6 +28,8 @@ jobs:
 
       - run: npm ci --legacy-peer-deps
       - run: npm run build
+        env:
+          VITE_BASE: /nmx_view/
 
       - uses: actions/upload-pages-artifact@v3
         with:
